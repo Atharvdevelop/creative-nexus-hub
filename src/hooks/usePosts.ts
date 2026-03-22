@@ -6,8 +6,25 @@ type BlogPost = Tables<'blog_posts'>;
 type Profile = Tables<'profiles'>;
 
 export type PostWithAuthor = BlogPost & {
-  profiles: Pick<Profile, 'username' | 'full_name' | 'headline' | 'profile_picture'>;
+  author: Pick<Profile, 'username' | 'full_name' | 'headline' | 'profile_picture'> | null;
 };
+
+async function enrichPostsWithAuthors(posts: BlogPost[]): Promise<PostWithAuthor[]> {
+  const authorIds = [...new Set(posts.map(p => p.author_id))];
+  if (authorIds.length === 0) return posts.map(p => ({ ...p, author: null }));
+
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('user_id, username, full_name, headline, profile_picture')
+    .in('user_id', authorIds);
+
+  const profileMap = new Map(profiles?.map(p => [p.user_id, p]) ?? []);
+
+  return posts.map(post => ({
+    ...post,
+    author: profileMap.get(post.author_id) ?? null,
+  }));
+}
 
 export function usePublishedPosts() {
   return useQuery({
@@ -15,11 +32,11 @@ export function usePublishedPosts() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('blog_posts')
-        .select('*, profiles!blog_posts_author_id_fkey(username, full_name, headline, profile_picture)')
+        .select('*')
         .eq('status', 'published')
         .order('published_date', { ascending: false });
       if (error) throw error;
-      return data as PostWithAuthor[];
+      return enrichPostsWithAuthors(data);
     },
   });
 }
@@ -31,11 +48,12 @@ export function usePostBySlug(slug: string | undefined) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('blog_posts')
-        .select('*, profiles!blog_posts_author_id_fkey(username, full_name, headline, profile_picture)')
+        .select('*')
         .eq('slug', slug!)
         .single();
       if (error) throw error;
-      return data as PostWithAuthor;
+      const [enriched] = await enrichPostsWithAuthors([data]);
+      return enriched;
     },
   });
 }
@@ -45,7 +63,6 @@ export function useUserPosts(username: string | undefined, includesDrafts: boole
     queryKey: ['posts', 'user', username, includesDrafts],
     enabled: !!username,
     queryFn: async () => {
-      // First get the profile to find user_id
       const { data: profile } = await supabase
         .from('profiles')
         .select('user_id')
@@ -55,7 +72,7 @@ export function useUserPosts(username: string | undefined, includesDrafts: boole
 
       let query = supabase
         .from('blog_posts')
-        .select('*, profiles!blog_posts_author_id_fkey(username, full_name, headline, profile_picture)')
+        .select('*')
         .eq('author_id', profile.user_id)
         .order('created_at', { ascending: false });
 
@@ -65,7 +82,7 @@ export function useUserPosts(username: string | undefined, includesDrafts: boole
 
       const { data, error } = await query;
       if (error) throw error;
-      return data as PostWithAuthor[];
+      return enrichPostsWithAuthors(data);
     },
   });
 }
