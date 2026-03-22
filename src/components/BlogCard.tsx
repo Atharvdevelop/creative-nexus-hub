@@ -1,13 +1,28 @@
 import { Link } from 'react-router-dom';
 import { Heart } from 'lucide-react';
-import { BlogPost, getInitials, formatDate, formatCount } from '@/lib/mockData';
+import type { PostWithAuthor } from '@/hooks/usePosts';
+
+function getInitials(name: string): string {
+  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+}
+
+function formatDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function formatCount(n: number): string {
+  if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+  return n.toString();
+}
 
 interface BlogCardProps {
-  post: BlogPost;
+  post: PostWithAuthor;
   index?: number;
 }
 
 const BlogCard = ({ post, index = 0 }: BlogCardProps) => {
+  const authorName = post.author?.full_name ?? 'Unknown';
+
   return (
     <article
       className="animate-reveal-up border-b last:border-b-0 py-8 first:pt-0"
@@ -15,16 +30,20 @@ const BlogCard = ({ post, index = 0 }: BlogCardProps) => {
     >
       <div className="flex gap-3 items-center mb-3">
         <div className="w-8 h-8 rounded-full bg-primary/10 text-primary text-xs font-semibold flex items-center justify-center shrink-0">
-          {getInitials(post.author.fullName)}
+          {getInitials(authorName)}
         </div>
         <div className="min-w-0">
-          <Link
-            to={`/profile/${post.author.username}`}
-            className="text-sm font-medium text-foreground hover:underline underline-offset-2"
-          >
-            {post.author.fullName}
-          </Link>
-          <p className="text-xs text-text-caption truncate">{post.author.headline}</p>
+          {post.author?.username ? (
+            <Link
+              to={`/profile/${post.author.username}`}
+              className="text-sm font-medium text-foreground hover:underline underline-offset-2"
+            >
+              {authorName}
+            </Link>
+          ) : (
+            <span className="text-sm font-medium text-foreground">{authorName}</span>
+          )}
+          <p className="text-xs text-text-caption truncate">{post.author?.headline ?? ''}</p>
         </div>
       </div>
 
@@ -39,17 +58,17 @@ const BlogCard = ({ post, index = 0 }: BlogCardProps) => {
 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3 text-xs text-text-caption">
-          <time>{formatDate(post.publishedDate!)}</time>
+          <time>{post.published_date ? formatDate(post.published_date) : ''}</time>
           <span>·</span>
-          <span>{post.readTime} min read</span>
+          <span>{post.read_time} min read</span>
         </div>
         <div className="flex items-center gap-1 text-text-caption text-xs">
           <Heart className="w-3.5 h-3.5" />
-          <span>{formatCount(post.claps)}</span>
+          <span>{formatCount(post.claps ?? 0)}</span>
         </div>
       </div>
 
-      {post.tags.length > 0 && (
+      {post.tags && post.tags.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mt-3">
           {post.tags.slice(0, 3).map(tag => (
             <span key={tag} className="px-2 py-0.5 text-xs rounded-md bg-muted text-muted-foreground">

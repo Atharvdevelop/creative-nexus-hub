@@ -1,15 +1,23 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import EditorToolbar from '@/components/EditorToolbar';
+import { useAuth } from '@/contexts/AuthContext';
+import { useCreatePost } from '@/hooks/usePosts';
 import { toast } from 'sonner';
 
 const EditorPage = () => {
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
+  const createPost = useCreatePost();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [isPreview, setIsPreview] = useState(false);
   const [activeFormats] = useState<Record<string, boolean>>({});
+
+  if (loading) return null;
+  if (!user) return <Navigate to="/auth" replace />;
 
   const handleToolbarAction = (action: string) => {
     const insertions: Record<string, string> = {
@@ -28,12 +36,20 @@ const EditorPage = () => {
     }
   };
 
-  const handleSave = (status: 'draft' | 'published') => {
+  const handleSave = async (status: 'draft' | 'published') => {
     if (!title.trim()) {
       toast.error('Please add a title');
       return;
     }
-    toast.success(status === 'draft' ? 'Draft saved' : 'Published!');
+    try {
+      const post = await createPost.mutateAsync({ title, content, status });
+      toast.success(status === 'draft' ? 'Draft saved' : 'Published!');
+      if (status === 'published') {
+        navigate(`/post/${post.slug}`);
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save');
+    }
   };
 
   const renderPreview = () => {
@@ -70,10 +86,10 @@ const EditorPage = () => {
             {isPreview ? <EyeOff className="w-4 h-4 mr-1" /> : <Eye className="w-4 h-4 mr-1" />}
             {isPreview ? 'Edit' : 'Preview'}
           </Button>
-          <Button variant="outline" size="sm" onClick={() => handleSave('draft')}>
+          <Button variant="outline" size="sm" onClick={() => handleSave('draft')} disabled={createPost.isPending}>
             Save Draft
           </Button>
-          <Button size="sm" onClick={() => handleSave('published')}>
+          <Button size="sm" onClick={() => handleSave('published')} disabled={createPost.isPending}>
             Publish
           </Button>
         </div>

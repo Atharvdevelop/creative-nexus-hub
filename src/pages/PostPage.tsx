@@ -1,10 +1,43 @@
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Heart } from 'lucide-react';
-import { mockPosts, getInitials, formatDate, formatCount } from '@/lib/mockData';
+import { usePostBySlug } from '@/hooks/usePosts';
+import { Skeleton } from '@/components/ui/skeleton';
+
+function getInitials(name: string): string {
+  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+}
+
+function formatDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function formatCount(n: number): string {
+  if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+  return n.toString();
+}
 
 const PostPage = () => {
   const { slug } = useParams<{ slug: string }>();
-  const post = mockPosts.find(p => p.slug === slug);
+  const { data: post, isLoading } = usePostBySlug(slug);
+
+  if (isLoading) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
+        <Skeleton className="h-4 w-16" />
+        <div className="flex gap-3 items-center">
+          <Skeleton className="w-10 h-10 rounded-full" />
+          <div className="space-y-1">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-3 w-48" />
+          </div>
+        </div>
+        <Skeleton className="h-10 w-3/4" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-2/3" />
+      </div>
+    );
+  }
 
   if (!post) {
     return (
@@ -15,7 +48,8 @@ const PostPage = () => {
     );
   }
 
-  const paragraphs = post.content.split('\n\n').filter(Boolean);
+  const paragraphs = (post.content ?? '').split('\n\n').filter(Boolean);
+  const authorName = post.author?.full_name ?? 'Unknown';
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
@@ -26,14 +60,18 @@ const PostPage = () => {
       <article className="animate-reveal-up">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-10 h-10 rounded-full bg-primary/10 text-primary text-sm font-semibold flex items-center justify-center">
-            {getInitials(post.author.fullName)}
+            {getInitials(authorName)}
           </div>
           <div>
-            <Link to={`/profile/${post.author.username}`} className="text-sm font-medium text-foreground hover:underline">
-              {post.author.fullName}
-            </Link>
+            {post.author?.username ? (
+              <Link to={`/profile/${post.author.username}`} className="text-sm font-medium text-foreground hover:underline">
+                {authorName}
+              </Link>
+            ) : (
+              <span className="text-sm font-medium text-foreground">{authorName}</span>
+            )}
             <div className="text-xs text-text-caption">
-              {post.publishedDate && formatDate(post.publishedDate)} · {post.readTime} min read
+              {post.published_date && formatDate(post.published_date)} · {post.read_time} min read
             </div>
           </div>
         </div>
@@ -44,12 +82,8 @@ const PostPage = () => {
 
         <div className="prose-content text-foreground/90">
           {paragraphs.map((para, i) => {
-            if (para.startsWith('## ')) {
-              return <h2 key={i}>{para.replace('## ', '')}</h2>;
-            }
-            if (para.startsWith('> ')) {
-              return <blockquote key={i}>{para.replace('> ', '')}</blockquote>;
-            }
+            if (para.startsWith('## ')) return <h2 key={i}>{para.replace('## ', '')}</h2>;
+            if (para.startsWith('> ')) return <blockquote key={i}>{para.replace('> ', '')}</blockquote>;
             return <p key={i}>{para}</p>;
           })}
         </div>
@@ -57,10 +91,10 @@ const PostPage = () => {
         <div className="flex items-center gap-4 mt-10 pt-6 border-t">
           <button className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors active:scale-95">
             <Heart className="w-5 h-5" />
-            <span className="text-sm font-medium">{formatCount(post.claps)}</span>
+            <span className="text-sm font-medium">{formatCount(post.claps ?? 0)}</span>
           </button>
           <div className="flex flex-wrap gap-1.5 ml-auto">
-            {post.tags.map(tag => (
+            {(post.tags ?? []).map(tag => (
               <span key={tag} className="px-2 py-0.5 text-xs rounded-md bg-muted text-muted-foreground">
                 {tag}
               </span>
