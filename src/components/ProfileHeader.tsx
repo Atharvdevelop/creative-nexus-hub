@@ -1,5 +1,7 @@
-import { MapPin, Link as LinkIcon, Users } from 'lucide-react';
+import { useState } from 'react';
+import { MapPin, Link as LinkIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import EditProfileDialog from '@/components/EditProfileDialog';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Profile = Tables<'profiles'>;
@@ -14,6 +16,7 @@ interface ProfileHeaderProps {
 }
 
 const ProfileHeader = ({ profile, isOwnProfile = false }: ProfileHeaderProps) => {
+  const [editOpen, setEditOpen] = useState(false);
   return (
     <div className="animate-reveal-up">
       <div
@@ -34,7 +37,7 @@ const ProfileHeader = ({ profile, isOwnProfile = false }: ProfileHeaderProps) =>
                 <p className="text-muted-foreground text-sm mt-0.5">{profile.headline}</p>
               </div>
               {isOwnProfile ? (
-                <Button variant="outline" size="sm">Edit Profile</Button>
+                <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>Edit Profile</Button>
               ) : (
                 <div className="flex gap-2">
                   <Button size="sm">Follow</Button>
@@ -64,6 +67,9 @@ const ProfileHeader = ({ profile, isOwnProfile = false }: ProfileHeaderProps) =>
           </p>
         )}
       </div>
+      {isOwnProfile && (
+        <EditProfileDialog profile={profile} open={editOpen} onOpenChange={setEditOpen} />
+      )}
     </div>
   );
 };

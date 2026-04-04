@@ -1,7 +1,10 @@
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Heart } from 'lucide-react';
 import { usePostBySlug } from '@/hooks/usePosts';
+import { usePostLikes, useHasLiked, useToggleLike } from '@/hooks/useLikes';
+import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from 'sonner';
 
 function getInitials(name: string): string {
   return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
@@ -19,6 +22,15 @@ function formatCount(n: number): string {
 const PostPage = () => {
   const { slug } = useParams<{ slug: string }>();
   const { data: post, isLoading } = usePostBySlug(slug);
+  const { user } = useAuth();
+  const { data: likeCount = 0 } = usePostLikes(post?.id);
+  const { data: hasLiked = false } = useHasLiked(post?.id, user?.id);
+  const toggleLike = useToggleLike(post?.id ?? '');
+
+  const handleLike = () => {
+    if (!user) { toast.error('Sign in to like posts'); return; }
+    toggleLike.mutate({ userId: user.id, liked: hasLiked });
+  };
 
   if (isLoading) {
     return (
@@ -89,9 +101,12 @@ const PostPage = () => {
         </div>
 
         <div className="flex items-center gap-4 mt-10 pt-6 border-t">
-          <button className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors active:scale-95">
-            <Heart className="w-5 h-5" />
-            <span className="text-sm font-medium">{formatCount(post.claps ?? 0)}</span>
+          <button
+            onClick={handleLike}
+            className={`flex items-center gap-1.5 transition-colors active:scale-95 ${hasLiked ? 'text-primary' : 'text-muted-foreground hover:text-primary'}`}
+          >
+            <Heart className={`w-5 h-5 ${hasLiked ? 'fill-primary' : ''}`} />
+            <span className="text-sm font-medium">{formatCount(likeCount)}</span>
           </button>
           <div className="flex flex-wrap gap-1.5 ml-auto">
             {(post.tags ?? []).map(tag => (
