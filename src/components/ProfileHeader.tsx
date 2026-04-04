@@ -67,6 +67,9 @@ const ProfileHeader = ({ profile, isOwnProfile = false }: ProfileHeaderProps) =>
           </p>
         )}
       </div>
+      {isOwnProfile && (
+        <EditProfileDialog profile={profile} open={editOpen} onOpenChange={setEditOpen} />
+      )}
     </div>
   );
 };
