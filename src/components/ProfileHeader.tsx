@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { MapPin, Link as LinkIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import EditProfileDialog from '@/components/EditProfileDialog';
 import type { Tables } from '@/integrations/supabase/types';
 
