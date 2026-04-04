@@ -1,7 +1,10 @@
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Heart } from 'lucide-react';
 import { usePostBySlug } from '@/hooks/usePosts';
+import { usePostLikes, useHasLiked, useToggleLike } from '@/hooks/useLikes';
+import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from 'sonner';
 
 function getInitials(name: string): string {
   return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
