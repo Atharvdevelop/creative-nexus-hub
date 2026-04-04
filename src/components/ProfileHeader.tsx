@@ -1,5 +1,7 @@
-import { MapPin, Link as LinkIcon, Users } from 'lucide-react';
+import { useState } from 'react';
+import { MapPin, Link as LinkIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import EditProfileDialog from '@/components/EditProfileDialog';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Profile = Tables<'profiles'>;
@@ -14,6 +16,7 @@ interface ProfileHeaderProps {
 }
 
 const ProfileHeader = ({ profile, isOwnProfile = false }: ProfileHeaderProps) => {
+  const [editOpen, setEditOpen] = useState(false);
   return (
     <div className="animate-reveal-up">
       <div
