@@ -22,6 +22,15 @@ function formatCount(n: number): string {
 const PostPage = () => {
   const { slug } = useParams<{ slug: string }>();
   const { data: post, isLoading } = usePostBySlug(slug);
+  const { user } = useAuth();
+  const { data: likeCount = 0 } = usePostLikes(post?.id);
+  const { data: hasLiked = false } = useHasLiked(post?.id, user?.id);
+  const toggleLike = useToggleLike(post?.id ?? '');
+
+  const handleLike = () => {
+    if (!user) { toast.error('Sign in to like posts'); return; }
+    toggleLike.mutate({ userId: user.id, liked: hasLiked });
+  };
 
   if (isLoading) {
     return (
