@@ -101,9 +101,12 @@ const PostPage = () => {
         </div>
 
         <div className="flex items-center gap-4 mt-10 pt-6 border-t">
-          <button className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors active:scale-95">
-            <Heart className="w-5 h-5" />
-            <span className="text-sm font-medium">{formatCount(post.claps ?? 0)}</span>
+          <button
+            onClick={handleLike}
+            className={`flex items-center gap-1.5 transition-colors active:scale-95 ${hasLiked ? 'text-primary' : 'text-muted-foreground hover:text-primary'}`}
+          >
+            <Heart className={`w-5 h-5 ${hasLiked ? 'fill-primary' : ''}`} />
+            <span className="text-sm font-medium">{formatCount(likeCount)}</span>
           </button>
           <div className="flex flex-wrap gap-1.5 ml-auto">
             {(post.tags ?? []).map(tag => (
