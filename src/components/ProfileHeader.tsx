@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { MapPin, Link as LinkIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import EditProfileDialog from '@/components/EditProfileDialog';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -26,9 +27,14 @@ const ProfileHeader = ({ profile, isOwnProfile = false }: ProfileHeaderProps) =>
 
       <div className="px-4 sm:px-6 -mt-12 sm:-mt-14">
         <div className="flex flex-col sm:flex-row sm:items-end gap-4">
-          <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-card border-4 border-card shadow-lg flex items-center justify-center text-2xl font-bold text-primary">
-            {getInitials(profile.full_name)}
-          </div>
+          <Avatar className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl border-4 border-card shadow-lg">
+            {profile.profile_picture ? (
+              <AvatarImage src={profile.profile_picture} alt={profile.full_name} className="object-cover" />
+            ) : null}
+            <AvatarFallback className="rounded-2xl text-2xl font-bold bg-primary/10 text-primary">
+              {getInitials(profile.full_name)}
+            </AvatarFallback>
+          </Avatar>
 
           <div className="flex-1 pb-1">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
