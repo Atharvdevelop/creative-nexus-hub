@@ -37,7 +37,7 @@ const ProfileHeader = ({ profile, isOwnProfile = false }: ProfileHeaderProps) =>
                 <p className="text-muted-foreground text-sm mt-0.5">{profile.headline}</p>
               </div>
               {isOwnProfile ? (
-                <Button variant="outline" size="sm">Edit Profile</Button>
+                <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>Edit Profile</Button>
               ) : (
                 <div className="flex gap-2">
                   <Button size="sm">Follow</Button>
