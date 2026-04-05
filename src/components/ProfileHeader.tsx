@@ -1,9 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react'; // Added useEffect
 import { MapPin, Link as LinkIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import EditProfileDialog from '@/components/EditProfileDialog';
 import type { Tables } from '@/integrations/supabase/types';
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 type Profile = Tables<'profiles'>;
 
@@ -18,6 +21,61 @@ interface ProfileHeaderProps {
 
 const ProfileHeader = ({ profile, isOwnProfile = false }: ProfileHeaderProps) => {
   const [editOpen, setEditOpen] = useState(false);
+  const { user } = useAuth(); 
+  const [isFollowing, setIsFollowing] = useState(false);
+
+  // This check makes sure the button state is correct when the page loads
+  useEffect(() => {
+    const checkFollowStatus = async () => {
+      if (user && !isOwnProfile) {
+        const { data } = await supabase
+          .from('follows')
+          .select('*')
+          .eq('follower_id', user.id)
+          .eq('following_id', profile.id)
+          .single();
+        
+        if (data) setIsFollowing(true);
+      }
+    };
+    checkFollowStatus();
+  }, [user, profile.id, isOwnProfile]);
+
+  const handleFollow = async () => {
+    if (!user) {
+      toast.error("Please login to follow");
+      return;
+    }
+
+    if (isFollowing) {
+      // Logic for Unfollowing
+      const { error } = await supabase
+        .from('follows')
+        .delete()
+        .eq('follower_id', user.id)
+        .eq('following_id', profile.id);
+
+      if (!error) {
+        setIsFollowing(false);
+        toast.info(`Unfollowed ${profile.full_name}`);
+      }
+      return;
+    }
+
+    // Logic for Following
+    const { error } = await supabase
+      .from('follows')
+      .insert([{ follower_id: user.id, following_id: profile.id }]);
+
+    if (error) {
+      if (error.code === '23505') toast.info("You already follow this person");
+      else toast.error(error.message);
+    } else {
+      setIsFollowing(true);
+      toast.success(`You are now following ${profile.full_name}`);
+    }
+  };
+
   return (
     <div className="animate-reveal-up">
       <div
@@ -46,7 +104,13 @@ const ProfileHeader = ({ profile, isOwnProfile = false }: ProfileHeaderProps) =>
                 <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>Edit Profile</Button>
               ) : (
                 <div className="flex gap-2">
-                  <Button size="sm">Follow</Button>
+                  <Button 
+                    size="sm" 
+                    onClick={handleFollow}
+                    variant={isFollowing ? "secondary" : "default"}
+                  >
+                    {isFollowing ? "Following" : "Follow"}
+                  </Button>
                   <Button variant="outline" size="sm">Message</Button>
                 </div>
               )}
