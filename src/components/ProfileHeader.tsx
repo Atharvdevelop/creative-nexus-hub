@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'; // Added useEffect
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MapPin, Link as LinkIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
