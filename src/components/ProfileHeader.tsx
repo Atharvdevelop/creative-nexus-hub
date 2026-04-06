@@ -22,7 +22,8 @@ interface ProfileHeaderProps {
 
 const ProfileHeader = ({ profile, isOwnProfile = false }: ProfileHeaderProps) => {
   const [editOpen, setEditOpen] = useState(false);
-  const { user } = useAuth(); 
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [isFollowing, setIsFollowing] = useState(false);
 
   // This check makes sure the button state is correct when the page loads
