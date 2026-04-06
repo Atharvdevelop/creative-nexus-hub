@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ArrowLeft, Send } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { useQueryClient } from '@tanstack/react-query'; // Add this line
 
 function getInitials(name: string) {
   return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
@@ -17,6 +18,7 @@ const MessagesPage = () => {
   const { user } = useAuth();
   const { username } = useParams<{ username?: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient(); // Add this line
   const [partnerId, setPartnerId] = useState<string | null>(null);
   const [partnerProfile, setPartnerProfile] = useState<{ username: string; full_name: string; profile_picture: string | null } | null>(null);
   const [text, setText] = useState('');
@@ -27,7 +29,7 @@ const MessagesPage = () => {
   const sendMsg = useSendMessage();
   const markRead = useMarkAsRead();
 
-  // Resolve username → partnerId
+  // 1. Resolve username → partnerId (IMPORTANT: restored this part)
   useEffect(() => {
     if (!username) { setPartnerId(null); return; }
     supabase.from('profiles').select('user_id, username, full_name, profile_picture')
@@ -37,22 +39,29 @@ const MessagesPage = () => {
       });
   }, [username]);
 
-  // Select partner from conversation list
+  // 2. Mark as read and refresh sidebar (Your new logic)
+  useEffect(() => {
+    if (!user || !partnerId) return;
+  
+    const unread = messages.filter(m => m.receiver_id === user.id && !m.is_read).map(m => m.id);
+  
+    if (unread.length) {
+      markRead.mutate({ visibleIds: unread }, {
+        onSuccess: () => {
+          // This refreshes the sidebar data immediately
+          queryClient.invalidateQueries({ queryKey: ['conversations', user.id] });
+        }
+      });
+    }
+  }, [messages, user, partnerId, queryClient]);
+
   const selectConversation = (c: Conversation) => {
     setPartnerId(c.partner.user_id);
     setPartnerProfile(c.partner);
     navigate(`/messages/${c.partner.username}`);
   };
 
-  // Auto-scroll
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
-
-  // Mark as read
-  useEffect(() => {
-    if (!user) return;
-    const unread = messages.filter(m => m.receiver_id === user.id && !m.is_read).map(m => m.id);
-    if (unread.length) markRead.mutate({ visibleIds: unread });
-  }, [messages, user]);
 
   const handleSend = () => {
     if (!text.trim() || !user || !partnerId) return;
