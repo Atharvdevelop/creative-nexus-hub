@@ -113,7 +113,7 @@ const ProfileHeader = ({ profile, isOwnProfile = false }: ProfileHeaderProps) =>
                   >
                     {isFollowing ? "Following" : "Follow"}
                   </Button>
-                  <Button variant="outline" size="sm">Message</Button>
+                  <Button variant="outline" size="sm" onClick={() => navigate(`/messages/${profile.username}`)}>Message</Button>
                 </div>
               )}
             </div>
