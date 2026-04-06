@@ -10,6 +10,7 @@ import ProfilePage from "@/pages/ProfilePage";
 import PostPage from "@/pages/PostPage";
 import EditorPage from "@/pages/EditorPage";
 import AuthPage from "@/pages/AuthPage";
+import MessagesPage from "@/pages/MessagesPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,6 +30,8 @@ const App = () => (
               <Route path="/profile/:username" element={<ProfilePage />} />
               <Route path="/post/:slug" element={<PostPage />} />
               <Route path="/editor" element={<EditorPage />} />
+              <Route path="/messages" element={<MessagesPage />} />
+              <Route path="/messages/:username" element={<MessagesPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </main>

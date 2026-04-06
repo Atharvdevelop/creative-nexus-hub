@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'; // Added useEffect
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MapPin, Link as LinkIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -21,7 +22,8 @@ interface ProfileHeaderProps {
 
 const ProfileHeader = ({ profile, isOwnProfile = false }: ProfileHeaderProps) => {
   const [editOpen, setEditOpen] = useState(false);
-  const { user } = useAuth(); 
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [isFollowing, setIsFollowing] = useState(false);
 
   // This check makes sure the button state is correct when the page loads
@@ -111,7 +113,7 @@ const ProfileHeader = ({ profile, isOwnProfile = false }: ProfileHeaderProps) =>
                   >
                     {isFollowing ? "Following" : "Follow"}
                   </Button>
-                  <Button variant="outline" size="sm">Message</Button>
+                  <Button variant="outline" size="sm" onClick={() => navigate(`/messages/${profile.username}`)}>Message</Button>
                 </div>
               )}
             </div>
