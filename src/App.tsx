@@ -10,6 +10,7 @@ import ProfilePage from "@/pages/ProfilePage";
 import PostPage from "@/pages/PostPage";
 import EditorPage from "@/pages/EditorPage";
 import AuthPage from "@/pages/AuthPage";
+import MessagesPage from "@/pages/MessagesPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
