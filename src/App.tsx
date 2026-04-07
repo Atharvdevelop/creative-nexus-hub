@@ -11,6 +11,7 @@ import PostPage from "@/pages/PostPage";
 import EditorPage from "@/pages/EditorPage";
 import AuthPage from "@/pages/AuthPage";
 import MessagesPage from "@/pages/MessagesPage";
+import Notifications from "@/pages/Notifications"; // Import the new page
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -25,13 +26,29 @@ const App = () => (
           <Navbar />
           <main className="min-h-[calc(100vh-3.5rem)]">
             <Routes>
+              {/* Home / Feed */}
               <Route path="/" element={<FeedPage />} />
+              
+              {/* Authentication */}
               <Route path="/auth" element={<AuthPage />} />
+              
+              {/* Profiles */}
               <Route path="/profile/:username" element={<ProfilePage />} />
+              
+              {/* Blog Posts */}
               <Route path="/post/:slug" element={<PostPage />} />
+              
+              {/* Writing / Editing */}
               <Route path="/editor" element={<EditorPage />} />
+              
+              {/* Direct Messaging */}
               <Route path="/messages" element={<MessagesPage />} />
               <Route path="/messages/:username" element={<MessagesPage />} />
+              
+              {/* Notifications - NEW ROUTE */}
+              <Route path="/notifications" element={<Notifications />} />
+              
+              {/* 404 Fallback */}
               <Route path="*" element={<NotFound />} />
             </Routes>
           </main>

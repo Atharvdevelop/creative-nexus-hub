@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Search, Bell, PenLine, LogIn } from 'lucide-react';
+import { Search, Bell, PenLine, LogIn, MessageSquare } from 'lucide-react'; // Added MessageSquare
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 
@@ -29,13 +29,37 @@ const Navbar = () => {
         <div className="flex items-center gap-2">
           {user ? (
             <>
+              {/* Search Button */}
               <button className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
                 <Search className="w-[18px] h-[18px]" />
               </button>
-              <button className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors relative">
+
+              {/* Messages Link - NEW */}
+              <Link 
+                to="/messages" 
+                className={cn(
+                  "p-2 rounded-lg transition-colors",
+                  location.pathname.startsWith('/messages') ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                )}
+                title="Messages"
+              >
+                <MessageSquare className="w-[18px] h-[18px]" />
+              </Link>
+
+              {/* Notifications Link - FIXED */}
+              <Link 
+                to="/notifications" 
+                className={cn(
+                  "p-2 rounded-lg transition-colors relative",
+                  location.pathname === '/notifications' ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                )}
+                title="Notifications"
+              >
                 <Bell className="w-[18px] h-[18px]" />
+                {/* This red dot currently shows if you are logged in. We can make it dynamic later! */}
                 <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary rounded-full" />
-              </button>
+              </Link>
+
               <Link
                 to="/editor"
                 className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-primary-foreground bg-primary rounded-lg hover:bg-primary/90 active:scale-[0.97] transition-all"
@@ -43,6 +67,7 @@ const Navbar = () => {
                 <PenLine className="w-3.5 h-3.5" />
                 Write
               </Link>
+
               <button
                 onClick={() => signOut()}
                 className="ml-1 w-8 h-8 rounded-full bg-primary/10 text-primary text-xs font-semibold flex items-center justify-center hover:bg-primary/20 transition-colors"
