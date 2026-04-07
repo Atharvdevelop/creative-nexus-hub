@@ -15,7 +15,7 @@ const Notifications = () => {
 
     const fetchNotifications = async () => {
       const { data } = await supabase
-        .from('notifications')
+        .from('notifications' as any)
         .select('*')
         .eq('user_id', user.id)
         .eq('is_read', false)
@@ -40,7 +40,7 @@ const Notifications = () => {
 
   const markAsRead = async (id: string) => {
     const { error } = await supabase
-      .from('notifications')
+      .from('notifications' as any)
       .update({ is_read: true })
       .eq('id', id);
 
