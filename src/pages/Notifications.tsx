@@ -11,32 +11,50 @@ const Notifications = () => {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    if (!user) return;
+    if (!user?.id) return;
 
     const fetchNotifications = async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('notifications' as any)
         .select('*')
         .eq('user_id', user.id)
         .eq('is_read', false)
         .order('created_at', { ascending: false });
-      if (data) setNotifications(data);
+      
+      if (error) {
+        console.error("Error fetching notifications:", error);
+      } else if (data) {
+        setNotifications(data);
+      }
     };
 
     fetchNotifications();
 
     const channel = supabase
-      .channel('public:notifications')
+      .channel(`user-notifications-${user.id}`)
       .on('postgres_changes', 
-        { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
+        { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'notifications', 
+          filter: `user_id=eq.${user.id}` 
+        },
         (payload) => {
-          setNotifications((prev) => [payload.new, ...prev]);
+          console.log("New notification received:", payload.new);
+          if (!payload.new.is_read) {
+            setNotifications((prev) => [payload.new, ...prev]);
+            
+            // ROOT LEVEL REFRESH: Force Navbar to update instantly
+            queryClient.invalidateQueries({ queryKey: ['unread-notifications-count'] });
+          }
         }
       )
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
-  }, [user]);
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, queryClient]);
 
   const markAsRead = async (id: string) => {
     const { error } = await supabase
@@ -45,49 +63,78 @@ const Notifications = () => {
       .eq('id', id);
 
     if (!error) {
+      // 1. Instantly update local UI state
       setNotifications(prev => prev.filter(n => n.id !== id));
-      queryClient.invalidateQueries({ queryKey: ['notifications-count'] });
+      
+      // 2. THE NUCLEAR OPTION: Clear cache so global badges (Navbar) update instantly
+      queryClient.clear(); 
+      queryClient.invalidateQueries({ queryKey: ['unread-notifications-count'] });
+      queryClient.invalidateQueries({ queryKey: ['unread-messages-count'] });
+      
+      console.log("Root state cleared and refreshed!");
+    } else {
+      console.error("Error marking notification as read:", error);
     }
   };
 
-  if (!user) return <div className="p-8 text-center text-muted-foreground">Please sign in to view notifications.</div>;
+  if (!user) return (
+    <div className="flex items-center justify-center min-h-[60vh] text-muted-foreground">
+      Please sign in to view notifications.
+    </div>
+  );
 
   return (
-    <div className="max-w-2xl mx-auto p-4 md:p-8">
-      <div className="flex items-center gap-3 mb-8">
-        <Bell className="w-6 h-6 text-primary" />
-        <h1 className="text-2xl font-bold font-serif">Notifications</h1>
+    <div className="max-w-2xl mx-auto p-4 md:p-8 animate-in fade-in duration-500">
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-3">
+          <Bell className="w-6 h-6 text-primary" />
+          <h1 className="text-2xl font-bold font-serif tracking-tight">Notifications</h1>
+        </div>
+        {notifications.length > 0 && (
+          <span className="text-xs font-medium px-2 py-1 bg-primary/10 text-primary rounded-full animate-pulse">
+            {notifications.length} New
+          </span>
+        )}
       </div>
 
       <div className="space-y-3">
-        {notifications.length === 0 && (
-          <div className="text-center py-20 border-2 border-dashed rounded-xl">
-            <p className="text-muted-foreground italic">You're all caught up, Atharv!</p>
+        {notifications.length === 0 ? (
+          <div className="text-center py-20 border-2 border-dashed border-muted rounded-2xl">
+            <div className="bg-muted w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Bell className="w-6 h-6 text-muted-foreground opacity-50" />
+            </div>
+            <p className="text-muted-foreground italic font-medium">You're all caught up, Atharv!</p>
           </div>
+        ) : (
+          notifications.map((n) => (
+            <div 
+              key={n.id} 
+              onClick={() => markAsRead(n.id)}
+              className="p-4 bg-card border border-border rounded-xl cursor-pointer transition-all hover:shadow-md hover:border-primary/50 flex items-center gap-4 group relative overflow-hidden"
+            >
+              <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary" />
+              
+              <div className="p-3 bg-muted rounded-full group-hover:bg-primary/10 transition-colors">
+                {n.type === 'follow' && <UserPlus className="w-5 h-5 text-blue-500" />}
+                {n.type === 'like' && <Heart className="w-5 h-5 text-red-500" />}
+                {n.type === 'message' && <MessageSquare className="w-5 h-5 text-green-500" />}
+              </div>
+              
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground">
+                   Someone <span className="font-normal text-muted-foreground">{n.content}</span>
+                </p>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1.5">
+                  {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
+                </p>
+              </div>
+              
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] text-primary font-bold uppercase">
+                Mark Read
+              </div>
+            </div>
+          ))
         )}
-
-        {notifications.map((n) => (
-          <div 
-            key={n.id} 
-            onClick={() => markAsRead(n.id)}
-            className="p-4 bg-card border border-border rounded-xl cursor-pointer transition-all hover:shadow-md hover:border-primary/50 flex items-center gap-4 group"
-          >
-            <div className="p-3 bg-muted rounded-full group-hover:bg-primary/10">
-              {n.type === 'follow' && <UserPlus className="w-5 h-5 text-blue-500" />}
-              {n.type === 'like' && <Heart className="w-5 h-5 text-red-500" />}
-              {n.type === 'message' && <MessageSquare className="w-5 h-5 text-green-500" />}
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-medium">
-                Someone <span className="font-normal text-muted-foreground">{n.content}</span>
-              </p>
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1">
-                {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
-              </p>
-            </div>
-            <div className="w-2 h-2 bg-primary rounded-full" />
-          </div>
-        ))}
       </div>
     </div>
   );

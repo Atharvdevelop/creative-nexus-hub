@@ -1,7 +1,9 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Search, Bell, PenLine, LogIn, MessageSquare } from 'lucide-react'; // Added MessageSquare
+import { Search, Bell, PenLine, LogIn, MessageSquare } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
+import { useQuery } from '@tanstack/react-query'; // Add this
+import { supabase } from '@/integrations/supabase/client'; // Add this
 
 function getInitials(name: string): string {
   return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
@@ -10,6 +12,36 @@ function getInitials(name: string): string {
 const Navbar = () => {
   const location = useLocation();
   const { user, profile, signOut } = useAuth();
+
+  // 1. Root Fix: Check for unread MESSAGES
+  const { data: unreadMessagesCount = 0 } = useQuery({
+    queryKey: ['unread-messages-count', user?.id],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('receiver_id', user?.id)
+        .eq('is_read', false);
+      return count || 0;
+    },
+    enabled: !!user,
+    refetchInterval: 5000, // Refresh every 5 seconds to stay in sync
+  });
+
+  // 2. Root Fix: Check for unread NOTIFICATIONS
+  const { data: unreadNotifsCount = 0 } = useQuery({
+    queryKey: ['unread-notifications-count', user?.id],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from('notifications' as any)
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user?.id)
+        .eq('is_read', false);
+      return count || 0;
+    },
+    enabled: !!user,
+    refetchInterval: 5000,
+  });
 
   return (
     <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-sm border-b">
@@ -29,24 +61,26 @@ const Navbar = () => {
         <div className="flex items-center gap-2">
           {user ? (
             <>
-              {/* Search Button */}
               <button className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
                 <Search className="w-[18px] h-[18px]" />
               </button>
 
-              {/* Messages Link - NEW */}
+              {/* Messages Link - Dynamic Dot */}
               <Link 
                 to="/messages" 
                 className={cn(
-                  "p-2 rounded-lg transition-colors",
+                  "p-2 rounded-lg transition-colors relative",
                   location.pathname.startsWith('/messages') ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 )}
                 title="Messages"
               >
                 <MessageSquare className="w-[18px] h-[18px]" />
+                {unreadMessagesCount > 0 && (
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary rounded-full animate-pulse" />
+                )}
               </Link>
 
-              {/* Notifications Link - FIXED */}
+              {/* Notifications Link - Dynamic Dot */}
               <Link 
                 to="/notifications" 
                 className={cn(
@@ -56,8 +90,9 @@ const Navbar = () => {
                 title="Notifications"
               >
                 <Bell className="w-[18px] h-[18px]" />
-                {/* This red dot currently shows if you are logged in. We can make it dynamic later! */}
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary rounded-full" />
+                {unreadNotifsCount > 0 && (
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary rounded-full" />
+                )}
               </Link>
 
               <Link

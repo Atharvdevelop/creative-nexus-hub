@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ArrowLeft, Send } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
-import { useQueryClient } from '@tanstack/react-query'; // Add this line
+import { useQueryClient } from '@tanstack/react-query';
 
 function getInitials(name: string) {
   return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
@@ -18,7 +18,7 @@ const MessagesPage = () => {
   const { user } = useAuth();
   const { username } = useParams<{ username?: string }>();
   const navigate = useNavigate();
-  const queryClient = useQueryClient(); // Add this line
+  const queryClient = useQueryClient();
   const [partnerId, setPartnerId] = useState<string | null>(null);
   const [partnerProfile, setPartnerProfile] = useState<{ username: string; full_name: string; profile_picture: string | null } | null>(null);
   const [text, setText] = useState('');
@@ -29,17 +29,24 @@ const MessagesPage = () => {
   const sendMsg = useSendMessage();
   const markRead = useMarkAsRead();
 
-  // 1. Resolve username → partnerId (IMPORTANT: restored this part)
+  // 1. Resolve username → partnerId
   useEffect(() => {
-    if (!username) { setPartnerId(null); return; }
+    if (!username) { 
+      setPartnerId(null); 
+      setPartnerProfile(null);
+      return; 
+    }
     supabase.from('profiles').select('user_id, username, full_name, profile_picture')
       .eq('username', username).single()
       .then(({ data }) => {
-        if (data) { setPartnerId(data.user_id); setPartnerProfile(data); }
+        if (data) { 
+          setPartnerId(data.user_id); 
+          setPartnerProfile(data); 
+        }
       });
   }, [username]);
 
-  // 2. Mark as read and refresh sidebar (Your new logic)
+  // 2. Mark as read and refresh sidebar (Root Level Fix)
   useEffect(() => {
     if (!user || !partnerId) return;
   
@@ -48,8 +55,12 @@ const MessagesPage = () => {
     if (unread.length) {
       markRead.mutate({ visibleIds: unread }, {
         onSuccess: () => {
-          // This refreshes the sidebar data immediately
+          // Refresh the conversation list sidebar
+          queryClient.invalidateQueries({ queryKey: ['conversations'] });
+          // Refresh the conversation list for this specific user
           queryClient.invalidateQueries({ queryKey: ['conversations', user.id] });
+          // Refresh any global notification badges in the Navbar
+          queryClient.invalidateQueries({ queryKey: ['unread-count'] });
         }
       });
     }
@@ -61,7 +72,10 @@ const MessagesPage = () => {
     navigate(`/messages/${c.partner.username}`);
   };
 
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+  // Auto-scroll to bottom on new messages
+  useEffect(() => { 
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); 
+  }, [messages]);
 
   const handleSend = () => {
     if (!text.trim() || !user || !partnerId) return;
@@ -88,11 +102,17 @@ const MessagesPage = () => {
               <div className="flex-1 min-w-0">
                 <div className="flex justify-between items-baseline">
                   <span className="font-medium text-sm truncate">{c.partner.full_name}</span>
-                  <span className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(c.lastMessage.created_at), { addSuffix: true })}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {formatDistanceToNow(new Date(c.lastMessage.created_at), { addSuffix: true })}
+                  </span>
                 </div>
                 <p className="text-xs text-muted-foreground truncate">{c.lastMessage.content}</p>
               </div>
-              {c.unreadCount > 0 && <span className="bg-primary text-primary-foreground text-xs rounded-full w-5 h-5 flex items-center justify-center">{c.unreadCount}</span>}
+              {c.unreadCount > 0 && (
+                <span className="bg-primary text-primary-foreground text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                  {c.unreadCount}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -123,15 +143,21 @@ const MessagesPage = () => {
               <div ref={bottomRef} />
             </div>
             <div className="p-3 border-t border-border flex gap-2">
-              <Input value={text} onChange={e => setText(e.target.value)} placeholder="Type a message…"
-                onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()} />
+              <Input 
+                value={text} 
+                onChange={e => setText(e.target.value)} 
+                placeholder="Type a message…"
+                onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()} 
+              />
               <Button size="icon" onClick={handleSend} disabled={!text.trim()}>
                 <Send className="w-4 h-4" />
               </Button>
             </div>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-muted-foreground">Select a conversation to start chatting.</div>
+          <div className="flex-1 flex items-center justify-center text-muted-foreground">
+            Select a conversation to start chatting.
+          </div>
         )}
       </div>
     </div>
