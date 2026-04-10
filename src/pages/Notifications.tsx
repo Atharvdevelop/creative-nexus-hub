@@ -40,11 +40,11 @@ const Notifications = () => {
           filter: `user_id=eq.${user.id}` 
         },
         (payload) => {
-          console.log("New notification received:", payload.new);
-          if (!payload.new.is_read) {
+          // Double check the user_id matches the logged-in user
+          if (payload.new.user_id === user.id && !payload.new.is_read) {
             setNotifications((prev) => [payload.new, ...prev]);
             
-            // ROOT LEVEL REFRESH: Force Navbar to update instantly
+            // Refresh Navbar counts
             queryClient.invalidateQueries({ queryKey: ['unread-notifications-count'] });
           }
         }
@@ -63,15 +63,15 @@ const Notifications = () => {
       .eq('id', id);
 
     if (!error) {
-      // 1. Instantly update local UI state
+      // 1. Remove from local list
       setNotifications(prev => prev.filter(n => n.id !== id));
       
-      // 2. THE NUCLEAR OPTION: Clear cache so global badges (Navbar) update instantly
-      queryClient.clear(); 
+      // 2. ROOT LEVEL REFRESH: Force all badges to update
       queryClient.invalidateQueries({ queryKey: ['unread-notifications-count'] });
       queryClient.invalidateQueries({ queryKey: ['unread-messages-count'] });
+      queryClient.refetchQueries({ queryKey: ['conversations'] });
       
-      console.log("Root state cleared and refreshed!");
+      console.log("Root level sync complete. Sidebar and Navbar updated!");
     } else {
       console.error("Error marking notification as read:", error);
     }
@@ -103,7 +103,7 @@ const Notifications = () => {
             <div className="bg-muted w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
               <Bell className="w-6 h-6 text-muted-foreground opacity-50" />
             </div>
-            <p className="text-muted-foreground italic font-medium">You're all caught up, Atharv!</p>
+            <p className="text-muted-foreground italic font-medium font-serif">You're all caught up, Atharv!</p>
           </div>
         ) : (
           notifications.map((n) => (
@@ -121,10 +121,10 @@ const Notifications = () => {
               </div>
               
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground">
+                <p className="text-sm font-medium text-foreground leading-snug">
                    Someone <span className="font-normal text-muted-foreground">{n.content}</span>
                 </p>
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1.5">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1.5 font-bold">
                   {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
                 </p>
               </div>
