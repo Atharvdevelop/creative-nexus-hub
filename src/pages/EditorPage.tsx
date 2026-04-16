@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -15,24 +15,52 @@ const EditorPage = () => {
   const [content, setContent] = useState('');
   const [isPreview, setIsPreview] = useState(false);
   const [activeFormats] = useState<Record<string, boolean>>({});
+  
+  // Create a reference to the textarea to manage selection
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   if (loading) return null;
   if (!user) return <Navigate to="/auth" replace />;
 
   const handleToolbarAction = (action: string) => {
-    const insertions: Record<string, string> = {
-      bold: '**bold text**',
-      italic: '*italic text*',
-      h2: '\n## Heading\n',
-      h3: '\n### Subheading\n',
-      bulletList: '\n- Item\n- Item\n',
-      orderedList: '\n1. Item\n2. Item\n',
-      blockquote: '\n> Quote\n',
-      code: '`code`',
-      hr: '\n---\n',
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    // Get the current selection positions
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = content.substring(start, end);
+    const before = content.substring(0, start);
+    const after = content.substring(end);
+
+    const formats: Record<string, [string, string]> = {
+      bold: ['**', '**'],
+      italic: ['*', '*'],
+      h2: ['\n## ', '\n'],
+      h3: ['\n### ', '\n'],
+      bulletList: ['\n- ', '\n'],
+      orderedList: ['\n1. ', '\n'],
+      blockquote: ['\n> ', '\n'],
+      code: ['`', '`'],
+      hr: ['\n---\n', ''],
     };
-    if (insertions[action]) {
-      setContent(prev => prev + insertions[action]);
+
+    if (formats[action]) {
+      const [prefix, suffix] = formats[action];
+      
+      // If user has highlighted text, wrap it. Otherwise, use placeholder.
+      const textToWrap = selectedText || `${action} text`;
+      const newContent = before + prefix + textToWrap + suffix + after;
+      
+      setContent(newContent);
+
+      // Restore focus and selection after state update
+      setTimeout(() => {
+        textarea.focus();
+        const newCursorPos = start + prefix.length;
+        const newEndPos = newCursorPos + textToWrap.length;
+        textarea.setSelectionRange(newCursorPos, newEndPos);
+      }, 0);
     }
   };
 
@@ -55,16 +83,23 @@ const EditorPage = () => {
   const renderPreview = () => {
     const paragraphs = content.split('\n\n').filter(Boolean);
     return (
-      <div className="prose-content text-foreground/90 min-h-[300px]">
+      <div className="prose-content text-foreground/90 min-h-[300px] max-w-none">
         {paragraphs.length === 0 && (
           <p className="text-muted-foreground italic">Nothing to preview yet…</p>
         )}
         {paragraphs.map((para, i) => {
-          if (para.startsWith('## ')) return <h2 key={i}>{para.replace('## ', '')}</h2>;
-          if (para.startsWith('### ')) return <h3 key={i}>{para.replace('### ', '')}</h3>;
-          if (para.startsWith('> ')) return <blockquote key={i}>{para.replace('> ', '')}</blockquote>;
-          if (para.startsWith('---')) return <hr key={i} className="my-8 border-border" />;
-          return <p key={i}>{para}</p>;
+          // Basic rendering logic (We'll upgrade this to ReactMarkdown on Day 3)
+          if (para.startsWith('## ')) return <h2 key={i} className="text-2xl font-bold mt-4 mb-2">{para.replace('## ', '')}</h2>;
+          if (para.startsWith('### ')) return <h3 key={i} className="text-xl font-bold mt-3 mb-2">{para.replace('### ', '')}</h3>;
+          if (para.startsWith('> ')) return <blockquote key={i} className="border-l-4 border-primary pl-4 italic my-4">{para.replace('> ', '')}</blockquote>;
+          if (para.startsWith('---')) return <hr key={i} className="my-8 border-t border-border" />;
+          
+          // Simple bold/italic replacement for preview
+          let formattedPara = para
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em>$1</em>');
+
+          return <p key={i} className="mb-4" dangerouslySetInnerHTML={{ __html: formattedPara }} />;
         })}
       </div>
     );
@@ -119,6 +154,7 @@ const EditorPage = () => {
             renderPreview()
           ) : (
             <textarea
+              ref={textareaRef}
               value={content}
               onChange={e => setContent(e.target.value)}
               placeholder="Tell your story…"
