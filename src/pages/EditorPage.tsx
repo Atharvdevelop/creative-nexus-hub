@@ -6,6 +6,7 @@ import EditorToolbar from '@/components/EditorToolbar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCreatePost } from '@/hooks/usePosts';
 import { toast } from 'sonner';
+import ReactMarkdown from 'react-markdown';
 
 const EditorPage = () => {
   const { user, loading } = useAuth();
