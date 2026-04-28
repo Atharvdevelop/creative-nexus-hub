@@ -17,7 +17,6 @@ const EditorPage = () => {
   const [isPreview, setIsPreview] = useState(false);
   const [activeFormats] = useState<Record<string, boolean>>({});
   
-  // Create a reference to the textarea to manage selection
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   if (loading) return null;
@@ -27,7 +26,6 @@ const EditorPage = () => {
     const textarea = textareaRef.current;
     if (!textarea) return;
 
-    // Get the current selection positions
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
     const selectedText = content.substring(start, end);
@@ -48,14 +46,11 @@ const EditorPage = () => {
 
     if (formats[action]) {
       const [prefix, suffix] = formats[action];
-      
-      // If user has highlighted text, wrap it. Otherwise, use placeholder.
       const textToWrap = selectedText || `${action} text`;
       const newContent = before + prefix + textToWrap + suffix + after;
       
       setContent(newContent);
 
-      // Restore focus and selection after state update
       setTimeout(() => {
         textarea.focus();
         const newCursorPos = start + prefix.length;
@@ -81,27 +76,15 @@ const EditorPage = () => {
     }
   };
 
+  // --- DAY 3 FIXED RENDERER ---
   const renderPreview = () => {
-    const paragraphs = content.split('\n\n').filter(Boolean);
     return (
-      <div className="prose-content text-foreground/90 min-h-[300px] max-w-none">
-        {paragraphs.length === 0 && (
+      <div className="prose prose-stone dark:prose-invert max-w-none min-h-[300px] animate-reveal-up">
+        {content ? (
+          <ReactMarkdown>{content}</ReactMarkdown>
+        ) : (
           <p className="text-muted-foreground italic">Nothing to preview yet…</p>
         )}
-        {paragraphs.map((para, i) => {
-          // Basic rendering logic (We'll upgrade this to ReactMarkdown on Day 3)
-          if (para.startsWith('## ')) return <h2 key={i} className="text-2xl font-bold mt-4 mb-2">{para.replace('## ', '')}</h2>;
-          if (para.startsWith('### ')) return <h3 key={i} className="text-xl font-bold mt-3 mb-2">{para.replace('### ', '')}</h3>;
-          if (para.startsWith('> ')) return <blockquote key={i} className="border-l-4 border-primary pl-4 italic my-4">{para.replace('> ', '')}</blockquote>;
-          if (para.startsWith('---')) return <hr key={i} className="my-8 border-t border-border" />;
-          
-          // Simple bold/italic replacement for preview
-          let formattedPara = para
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-            .replace(/\*(.*?)\*/g, '<em>$1</em>');
-
-          return <p key={i} className="mb-4" dangerouslySetInnerHTML={{ __html: formattedPara }} />;
-        })}
       </div>
     );
   };
