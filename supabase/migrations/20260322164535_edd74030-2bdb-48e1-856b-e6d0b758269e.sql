@@ -1,4 +1,4 @@
-
+ 
 -- Create profiles table
 CREATE TABLE public.profiles (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
